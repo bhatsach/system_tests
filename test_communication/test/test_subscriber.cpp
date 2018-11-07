@@ -29,15 +29,18 @@ rclcpp::SubscriptionBase::SharedPtr subscribe(
   std::vector<typename T::SharedPtr> & expected_messages,
   std::vector<bool> & received_messages)
 {
+  printf("(DEBUG) subscribe()\n");
   received_messages.assign(expected_messages.size(), false);
 
   auto callback =
     [&expected_messages, &received_messages](const typename T::SharedPtr received_message) -> void
     {
+      printf("(DEBUG) callback received msg\n");
       // find received message in vector of expected messages
       auto received = received_messages.begin();
       bool known_message = false;
       size_t index = 0;
+      printf("(DEBUG) expected_messages.size(): %zu\n", expected_messages.size());
       for (auto expected_message : expected_messages) {
         if (*received_message == *expected_message) {
           *received = true;
@@ -57,9 +60,11 @@ rclcpp::SubscriptionBase::SharedPtr subscribe(
       // shutdown node when all expected messages have been received
       for (auto received_msg : received_messages) {
         if (!received_msg) {
+          printf("(DEBUG) callback !received_msg, returning\n");
           return;
         }
       }
+      printf("(DEBUG) callback rclcpp::shutdown()\n");
       rclcpp::shutdown();
     };
 
@@ -68,6 +73,7 @@ rclcpp::SubscriptionBase::SharedPtr subscribe(
 
   auto subscriber = node->create_subscription<T>(
     std::string("test/message/") + message_type, callback, custom_qos_profile);
+  printf("(DEBUG) end subscribe()\n");
   return subscriber;
 }
 
@@ -118,8 +124,10 @@ int main(int argc, char ** argv)
     subscriber = subscribe<test_msgs::msg::DynamicArrayPrimitives>(
       node, message, messages_dynamic_array_primitives, received_messages);
   } else if (message == "DynamicArrayStaticArrayPrimitivesNested") {
+    printf("(DEBUG) creating subscriber\n");
     subscriber = subscribe<test_msgs::msg::DynamicArrayStaticArrayPrimitivesNested>(
       node, message, messages_dynamic_array_static_array_primitives_nested, received_messages);
+    printf("(DEBUG) done creating subscriber\n");
   } else if (message == "BoundedArrayPrimitives") {
     subscriber = subscribe<test_msgs::msg::BoundedArrayPrimitives>(
       node, message, messages_bounded_array_primitives, received_messages);
@@ -143,6 +151,7 @@ int main(int argc, char ** argv)
     rclcpp::shutdown();
     return 1;
   }
+  printf("(DEBUG) spin()\n");
   rclcpp::spin(node);
 
   auto end = std::chrono::steady_clock::now();
