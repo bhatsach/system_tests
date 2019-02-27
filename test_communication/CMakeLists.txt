@@ -149,6 +149,13 @@ if(BUILD_TESTING)
   endfunction()
 
   macro(multi_targets)
+    # Define option to skip tests which interfere with address sanitizer.
+    option(ADD_ASAN_LIB_IF_REQD "Adds asan lib to LD_PRELOAD" OFF)
+    set(optional_libasan_path "")
+    if(ADD_ASAN_LIB_IF_REQD)
+      execute_process(COMMAND bash "-c" "ldconfig -p | grep libasan | awk '{print $NF}'"
+      OUTPUT_VARIABLE optional_libasan_path OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
     # test publish / subscribe messages
     if(rmw_implementation1 STREQUAL rmw_implementation2)
       set(suffix "${suffix}__${rmw_implementation1}")
@@ -192,7 +199,10 @@ if(BUILD_TESTING)
         PYTHON_EXECUTABLE "${_PYTHON_EXECUTABLE}"
         APPEND_LIBRARY_DIRS "${append_library_dirs}"
         TIMEOUT 15
-        ${SKIP_TEST})
+        ${SKIP_TEST}
+       ENV
+       LD_PRELOAD=${optional_libasan_path}
+       )
       if(TEST test_publisher_subscriber${test_suffix})
         set_tests_properties(
           test_publisher_subscriber${test_suffix}
@@ -239,7 +249,9 @@ if(BUILD_TESTING)
         PYTHON_EXECUTABLE "${_PYTHON_EXECUTABLE}"
         APPEND_LIBRARY_DIRS "${append_library_dirs}"
         TIMEOUT 30
-        ${SKIP_TEST})
+        ${SKIP_TEST}
+       ENV
+        LD_PRELOAD=${optional_libasan_path})
       if(TEST test_requester_replier${test_suffix})
         set_tests_properties(
           test_requester_replier${test_suffix}
